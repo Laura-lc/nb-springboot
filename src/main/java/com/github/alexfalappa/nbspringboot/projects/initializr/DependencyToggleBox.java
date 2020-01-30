@@ -26,7 +26,9 @@ import java.util.Objects;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.UIDefaults;
+import javax.swing.UIManager;
 
 import org.apache.commons.lang.WordUtils;
 import org.openide.awt.HtmlBrowser;
@@ -57,6 +59,7 @@ public class DependencyToggleBox extends javax.swing.JPanel {
     private static final ImageIcon ICO_BOK_MDM = new ImageIcon(BootDependenciesPanel.class.getResource("book_medium.png"));
     private static final ImageIcon ICO_BOK_DRK = new ImageIcon(BootDependenciesPanel.class.getResource("book_dark.png"));
     private static final Insets INSETS_SMALLBUTTON = new Insets(1, 1, 1, 1);
+    private static final int CHECKBOX_ICON_WIDTH;
     private static final ActionListener refActionListener = new ActionListener() {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -91,11 +94,24 @@ public class DependencyToggleBox extends javax.swing.JPanel {
     };
     private static final UIDefaults uiDef = new UIDefaults();
     private static String currentBootVersion = null;
+    private JLabel lDesc;
     private JButton bReference;
     private JButton bGuide;
 
     static {
         uiDef.put("Button.contentMargins", INSETS_SMALLBUTTON);
+        // calculate the space taken by the checkbox icon in the current LAF
+        final int iconWidth = UIManager.getIcon("CheckBox.icon").getIconWidth();
+        System.out.println("iconWidth = " + iconWidth);
+        final int iconTextGap = UIManager.getInt("CheckBox.textIconGap");
+        System.out.println("iconTextGap = " + iconTextGap);
+        int leftInset = 0;
+        if (UIManager.getInsets("CheckBox.margin") != null) {
+            leftInset = UIManager.getInsets("CheckBox.margin").left;
+        }
+        System.out.println("leftInset = " + leftInset);
+        CHECKBOX_ICON_WIDTH = iconWidth + iconTextGap + leftInset;
+        System.out.println("CHECKBOX_ICON_WIDTH = " + CHECKBOX_ICON_WIDTH);
     }
 
     public DependencyToggleBox() {
@@ -107,7 +123,8 @@ public class DependencyToggleBox extends javax.swing.JPanel {
         final String id = dn.path("id").asText();
         final String description = dn.path("description").asText();
         final String versRange = dn.path("versionRange").asText();
-        lDepName.setText(name);
+        cbDep.setText(name);
+        addDescLabel();
         this.setName(id);
         this.putClientProperty(PROP_VERSION_RANGE, versRange);
         this.putClientProperty(PROP_DESCRIPTION, description);
@@ -130,7 +147,22 @@ public class DependencyToggleBox extends javax.swing.JPanel {
         }
     }
 
-    public void setLinkReference(String url, String title) {
+    private void addDescLabel() {
+        if (lDesc == null) {
+            lDesc = new JLabel("Dependency description"); // NOI18N
+            lDesc.setEnabled(false);
+            lDesc.setFont(lDesc.getFont().deriveFont(lDesc.getFont().getSize() - 1f));
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 1;
+            gbc.gridwidth = 4;
+            gbc.anchor = java.awt.GridBagConstraints.LINE_START;
+            gbc.insets = new java.awt.Insets(0, CHECKBOX_ICON_WIDTH, 0, 0);
+            add(lDesc, gbc);
+        }
+    }
+
+    private void setLinkReference(String url, String title) {
         Objects.requireNonNull(url);
         if (bReference == null) {
             bReference = new JButton();
@@ -144,7 +176,7 @@ public class DependencyToggleBox extends javax.swing.JPanel {
             bReference.setFocusable(false);
             bReference.putClientProperty("Nimbus.Overrides", uiDef);
             bReference.addActionListener(refActionListener);
-            GridBagConstraints gbc = new java.awt.GridBagConstraints();
+            GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 3;
             gbc.gridy = 0;
             this.add(bReference, gbc);
@@ -153,7 +185,7 @@ public class DependencyToggleBox extends javax.swing.JPanel {
         bReference.putClientProperty(PROP_REFERENCE_TEMPLATE_URL, url);
     }
 
-    public void setLinkGuide(String url, String title) {
+    private void setLinkGuide(String url, String title) {
         Objects.requireNonNull(url);
         if (bGuide == null) {
             bGuide = new JButton();
@@ -167,7 +199,7 @@ public class DependencyToggleBox extends javax.swing.JPanel {
             bGuide.setFocusable(false);
             bGuide.putClientProperty("Nimbus.Overrides", uiDef);
             bGuide.addActionListener(guideActionListener);
-            GridBagConstraints gbc = new java.awt.GridBagConstraints();
+            GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 2;
             gbc.gridy = 0;
             this.add(bGuide, gbc);
@@ -182,7 +214,6 @@ public class DependencyToggleBox extends javax.swing.JPanel {
         String description = (String) this.getClientProperty(PROP_DESCRIPTION);
         final boolean allowable = allowable(verRange, bootVersion);
         cbDep.setEnabled(allowable);
-        lDepName.setEnabled(allowable);
         lDesc.setText(prepDescription(description, allowable, verRange));
     }
 
@@ -195,7 +226,7 @@ public class DependencyToggleBox extends javax.swing.JPanel {
     }
 
     public String getText() {
-        return lDepName.getText();
+        return cbDep.getText();
     }
 
     /**
@@ -208,44 +239,25 @@ public class DependencyToggleBox extends javax.swing.JPanel {
         java.awt.GridBagConstraints gridBagConstraints;
 
         cbDep = new javax.swing.JCheckBox();
-        lDepName = new javax.swing.JLabel();
-        lDesc = new javax.swing.JLabel();
+        filler1 = new javax.swing.Box.Filler(new java.awt.Dimension(2, 18), new java.awt.Dimension(2, 18), new java.awt.Dimension(2, 18));
 
         setLayout(new java.awt.GridBagLayout());
-        add(cbDep, new java.awt.GridBagConstraints());
 
-        org.openide.awt.Mnemonics.setLocalizedText(lDepName, org.openide.util.NbBundle.getMessage(DependencyToggleBox.class, "DependencyToggleBox.lDepName.text")); // NOI18N
-        lDepName.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                lDepNameMouseClicked(evt);
-            }
-        });
+        org.openide.awt.Mnemonics.setLocalizedText(cbDep, org.openide.util.NbBundle.getMessage(DependencyToggleBox.class, "DependencyToggleBox.cbDep.text")); // NOI18N
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
+        add(cbDep, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
-        gridBagConstraints.weightx = 1.0;
-        add(lDepName, gridBagConstraints);
-
-        lDesc.setFont(lDesc.getFont().deriveFont(lDesc.getFont().getSize()-1f));
-        org.openide.awt.Mnemonics.setLocalizedText(lDesc, org.openide.util.NbBundle.getMessage(DependencyToggleBox.class, "DependencyToggleBox.lDesc.text")); // NOI18N
-        lDesc.setEnabled(false);
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 1;
-        gridBagConstraints.gridy = 1;
-        gridBagConstraints.gridwidth = 3;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
-        add(lDesc, gridBagConstraints);
+        add(filler1, gridBagConstraints);
     }// </editor-fold>//GEN-END:initComponents
-
-    private void lDepNameMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lDepNameMouseClicked
-        cbDep.doClick();
-    }//GEN-LAST:event_lDepNameMouseClicked
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox cbDep;
-    private javax.swing.JLabel lDepName;
-    private javax.swing.JLabel lDesc;
+    private javax.swing.Box.Filler filler1;
     // End of variables declaration//GEN-END:variables
 
     private boolean allowable(String verRange, String bootVersion) {
